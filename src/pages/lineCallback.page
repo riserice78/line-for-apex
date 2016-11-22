@@ -1,0 +1,332 @@
+<apex:page showHeader="false" controller="LineController" standardStylesheets="false">
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+    <style>
+        #headerForm{
+            margin: 35px 0 10px;
+        }
+        .formContainer{
+            width: 98%;
+            margin: 70px auto 0;
+        }
+        .formContainer:last-of-type{
+            margin-bottom: 500px;
+        }
+        #title{
+            color: orange;
+            text-align: center;
+            width: 100%;
+            background: #333;
+            z-index: 2000;
+        }
+        .buttonGroupContainer{
+            margin: 0px 1% 10px;
+            display: inline-block;
+        }
+        .hidden{
+            display: none !important;
+        }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script>
+        $(document).on('ready', function(){
+            var callback = function(result){
+                console.log('result: ', result);
+            };
+            $('#sendTextMessage').on('click', function(event) {  
+                var $formContainer = $(this).closest('.formContainer');
+                console.log('form: ', $formContainer.find('.message').val());
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushTextMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.message').val(), callback);
+            });
+            $('#sendImageMessage').on('click', function(event) {
+                var $formContainer = $(this).closest('.formContainer');
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushImageMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.originalContentUrl').val(), 
+                    $formContainer.find('.previewImageUrl').val(), callback);
+            });
+            $('#sendVideoMessage').on('click', function(event) {  
+                var $formContainer = $(this).closest('.formContainer');
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushVideoMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.originalContentUrl').val(), 
+                    $formContainer.find('.previewImageUrl').val(), callback);
+            });
+            $('#sendAudioMessage').on('click', function(event) {  
+                var $formContainer = $(this).closest('.formContainer');
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushAudioMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.originalContentUrl').val(), 
+                    $formContainer.find('.duration').val(), callback);
+            });
+            $('#sendLocationMessage').on('click', function(event) {  
+                var $formContainer = $(this).closest('.formContainer');
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushLocationMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.title').val(), 
+                    $formContainer.find('.address').val(), $formContainer.find('.latitude').val(), $formContainer.find('.longitude').val(), callback);
+            });
+            $('#sendStickerMessage').on('click', function(event) {  
+                var $formContainer = $(this).closest('.formContainer');
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushStickerMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.packageId').val(), 
+                    $formContainer.find('.stickerId').val(), callback);
+            });
+           
+            $('#sendImageMapMessage').on('click', function(event) {  
+                var $formContainer = $(this).closest('.formContainer');
+                var baseSize = {
+                    width: parseInt($formContainer.find('.baseSizeWidth').val()) || 0,
+                    height: parseInt($formContainer.find('.baseSizeHeight').val()) || 0
+                };
+                var uriActions = [];
+                var messageActions = [];
+                $formContainer.find('.actionItem').each(function(){
+                    var $this = $(this);
+                    var area = {
+                        x: parseInt($this.find('.imageMapX').val()) || 0,
+                        y: parseInt($this.find('.imageMapY').val()) || 0,
+                        width: parseInt($this.find('.imageMapWidth').val()) || 0,
+                        height: parseInt($this.find('.imageMapHeight').val()) || 0
+                    };
+                    if($this.find('.imageMapAction').val() == 'message'){
+                        messageActions.push({
+                            type: 'message',
+                            text: $this.find('.messageText').val(),
+                            area: area                            
+                        });
+                    }else{
+                        uriActions.push({
+                            type: 'uri',
+                            linkUri: $this.find('.linkUri').val(),
+                            area: area
+                        });
+                    }
+                });
+
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushImageMapMessageToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.baseUrl').val(), 
+                    $formContainer.find('.altText').val(), baseSize, uriActions, messageActions, callback);
+            });
+
+            $('.addAction').on('click', function(){
+                var $container = $(this).closest('.actionContainer');
+                //TO DO
+            });
+            $('.imageMapAction').on('change', function(){
+                var selected = $('option:selected', this);
+                var $container = $(this).closest('.actionContainer');
+                $container.find('.typeDependentField').addClass('hidden');
+                $container.find('.'+$(selected).attr('data-show')).removeClass('hidden');
+            });
+        });
+    </script>
+</head>
+<body>
+    <div id="title">
+        Line Api Apex Wrapper<br />
+        brought to you by Riez
+    </div>
+    <nav class="navbar navbar-default navbar-fixed-bottom">
+        <div class="container-fluid">
+            <form id="headerForm">
+                <div class="form-group">
+                    <label for="accessToken">Access Token</label>
+                    <input type="text" class="form-control" id="accessToken" value="" />
+                </div>
+                <div class="form-group">
+                    <label for="userId">User Id</label>
+                    <input type="text" class="form-control" id="userId" value="" />
+                </div>
+            </form>
+        </div>
+        <div class="btn-group buttonGroupContainer" role="group">
+            <button type="button" class="btn btn-default"><a href="#textMessageForm">Text</a></button>
+            <button type="button" class="btn btn-default"><a href="#imageMessageForm">Image</a></button>
+            <button type="button" class="btn btn-default"><a href="#videoMessageForm">Video</a></button>
+            <button type="button" class="btn btn-default"><a href="#audioMessageForm">Audio</a></button>
+            <button type="button" class="btn btn-default"><a href="#locationMessageForm">Location</a></button>
+            <button type="button" class="btn btn-default"><a href="#stickerMessageForm">Sticker</a></button>
+        </div>
+        <div class="btn-group buttonGroupContainer" role="group">
+            <button type="button" class="btn btn-default" disabled="true"><a href="#imageMapMessageForm">Image Map</a></button>
+        </div>
+        <div class="btn-group buttonGroupContainer" role="group">
+            <button type="button" class="btn btn-default" disabled="true"><a href="#imageMessageForm">Button Template</a></button>
+            <button type="button" class="btn btn-default" disabled="true"><a href="#videoMessageForm">Confirm Template</a></button>
+            <button type="button" class="btn btn-default" disabled="true"><a href="#audioMessageForm">Carousel Template</a></button>
+        </div>
+    </nav>
+
+    <div class="formContainer panel panel-default" id="textMessageForm">
+        <div class="panel-heading">Text Message</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Message</label>
+                    <input type="text" class="form-control message" value="yeho" max="2000"/>
+                </div>
+                <button type="submit" id="sendTextMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+    <div class="formContainer panel panel-default" id="imageMessageForm">
+        <div class="panel-heading">Image Message</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Original Content Url</label>
+                    <input type="text" class="form-control originalContentUrl" max="1000" value="https://cdn.pixabay.com/photo/2016/08/07/15/02/blueberries-1576407_960_720.jpg" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Preview Image Url</label>
+                    <input type="text" class="form-control previewImageUrl"  max="1000" value="https://cdn.pixabay.com/photo/2016/08/07/15/02/blueberries-1576407_960_720.jpg" />
+                </div>
+                <button type="submit" id="sendImageMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+    <div class="formContainer panel panel-default" id="videoMessageForm">
+        <div class="panel-heading">Video Message</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Original Content Url</label>
+                    <input type="text" class="form-control originalContentUrl"  max="1000" value="https://example.com/original.mp4" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Preview Image Url</label>
+                    <input type="text" class="form-control previewImageUrl"  max="1000" value="https://i.vimeocdn.com/video/602461961_640x360.jpg" />
+                </div>
+                <button type="submit" id="sendVideoMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+    <div class="formContainer panel panel-default" id="audioMessageForm">
+        <div class="panel-heading">Audio Message</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Original Content Url</label>
+                    <input type="text" class="form-control originalContentUrl" max="1000" value="https://example.com/original.m4a" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Duration</label>
+                    <input type="number" class="form-control duration"  value="240000" />
+                </div>
+                <button type="submit" id="sendAudioMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+    <div class="formContainer panel panel-default" id="locationMessageForm">
+        <div class="panel-heading">Location Message</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Title</label>
+                    <input type="text" class="form-control title"  max="100" value="my location" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Address</label>
+                    <input type="text" class="form-control address" max="100"  value="〒150-0002 東京都渋谷区渋谷２丁目２１−１" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Latitude</label>
+                    <input type="number" class="form-control latitude"  value="35.65910807942215" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Longitude</label>
+                    <input type="number" class="form-control longitude"  value="139.70372892916203" />
+                </div>
+                <button type="submit" id="sendLocationMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+    <div class="formContainer panel panel-default" id="stickerMessageForm">
+        <div class="panel-heading">Sticker Message　<a href="https://devdocs.line.me/files/sticker_list.pdf" target="_blank">参考</a></div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Package Id</label>
+                    <input type="text" class="form-control packageId" value="4" />
+                </div>
+                <div class="form-group">
+                    <label for="message">Sticker Id</label>
+                    <input type="text" class="form-control stickerId" value="300" />
+                </div>
+                <button type="submit" id="sendStickerMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+    <div class="formContainer panel panel-default" id="imageMapMessageForm">
+        <div class="panel-heading">Image Map</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="baseUrl">Base Url</label>
+                    <input type="text" class="form-control baseUrl" max="1000" value="https://cdn.pixabay.com/photo/2016/08/07/15/02/blueberries-1576407_960_720.jpg" />
+                </div>
+                <div class="form-group">
+                    <label for="altText">Alt Text</label>
+                    <input type="text" class="form-control altText" max="400" value="hello" />
+                </div>
+                <div class="form-group">
+                    <label for="baseSizeWidth">Base Size Width</label>
+                    <input type="number" class="form-control baseSizeWidth" value="1040" />
+                 </div>
+                <div class="form-group">
+                    <label for="baseSizeHeight">Base Size Height</label>
+                    <input type="number" class="form-control baseSizeHeight" value="1040" />
+                 </div>
+                <div class="panel panel-default actionContainer">
+                    <div class="panel-heading">Actions
+                        <button type="button" class="btn btn-default addAction" aria-label="Plus">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="actionItem">
+                            <div class="form-group">
+                                <label for="actionType">Type</label>
+                                <select class="imageMapAction">
+                                    <option value="uri" selected="true" data-show="uriField">URI</option>
+                                    <option value="message" data-show="messageField">Message</option>
+                                </select>
+                             </div>
+                             <div class="uriField form-group typeDependentField">
+                                <label for="linkUri">Link Uri</label>
+                                <input type="text" max="1000" class="form-control linkUri " value="https://example.com/" />                         
+                             </div>
+                             <div class="messageField form-group hidden typeDependentField">
+                                <label for="messageText">Message</label>
+                                <input type="text" max="400" class="form-control messageText" value="this is the message" />                         
+                             </div>
+                             <div class="form-group">
+                                <label for="imageMapX">Area X</label>
+                                <input type="number" class="form-control imageMapX" value="0" />                         
+                             </div>
+                             <div class="form-group">
+                                <label for="imageMapX">Area Y</label>
+                                <input type="number" class="form-control imageMapY" value="0" />                         
+                             </div>
+                             <div class="form-group">
+                                <label for="imageMapWidth">Area Width</label>
+                                <input type="number" class="form-control imageMapWidth" value="520" />                         
+                             </div>
+                             <div class="form-group">
+                                <label for="imageMapHeight">Area Height</label>
+                                <input type="number" class="form-control imageMapHeight" value="1040" />                         
+                             </div>
+                        </div>
+                    </div>
+                </div>                
+                <button type="submit" id="sendImageMapMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>
+
+</apex:page>
