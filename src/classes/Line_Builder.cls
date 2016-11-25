@@ -51,7 +51,7 @@ public class Line_Builder{
     private static final String TEMPLATE_TYPE_BUTTONS = 'buttons';
     private static final String TEMPLATE_TYPE_CAROUSEL = 'carousel';
     private static final String EVENT_TYPE_FOLLOW = 'follow';
-    
+    private static final String EVENT_TYPE_UNFOLLOW = 'unfollow';    
 
     private static JSONGenerator buildPostbackActionJson(JSONGenerator gen, Line_PostbackAction action){
             gen.writeStartObject();
@@ -229,9 +229,7 @@ public class Line_Builder{
         String pictureUrl = (String)objMap.get(JSON_PICTUREURL);
         String statusMessage = (String)objMap.get(JSON_STATUSMESSAGE);
         return new Line_UserProfile(displayName, userId, pictureUrl, statusMessage);    
-
     }
-
 
     private static Line_Source buildSource(Map<String, Object> objMap){
         String type = (String)objMap.get(JSON_TYPE);            
@@ -248,8 +246,11 @@ public class Line_Builder{
                 DateTime timestamp = DateTime.newInstance( (Long)objMap.get(JSON_TIMESTAMP) );
                 Line_Source source = buildSource((Map<String, Object>)objMap.get(JSON_SOURCE));
                 return new Line_FollowEvent(replyToken, timestamp, source);                
+            }else if(type.equals(EVENT_TYPE_UNFOLLOW)){
+                DateTime timestamp = DateTime.newInstance( (Long)objMap.get(JSON_TIMESTAMP) );
+                Line_Source source = buildSource((Map<String, Object>)objMap.get(JSON_SOURCE));
+                return new Line_UnfollowEvent(timestamp, source);
             }
-
             return null;
     }
 }
