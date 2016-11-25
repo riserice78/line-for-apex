@@ -120,6 +120,13 @@
                 $container.find('.typeDependentField').addClass('hidden');
                 $container.find('.'+$(selected).attr('data-show')).removeClass('hidden');
             });
+            $('.lineContact').on('click', function(){
+                $('#userId').val($(this).attr('data-userId'));
+                $(this).closest('.dropdown-menu').hide();
+            });
+            $('.dropdown-toggle').on('click', function(){
+                $(this).siblings('.dropdown-menu').toggle();
+            });
         });
     </script>
 </head>
@@ -135,9 +142,16 @@
                     <label for="accessToken">Access Token</label>
                     <input type="text" class="form-control" id="accessToken" value="{!accessToken}" />
                 </div>
-                <div class="form-group">
-                    <label for="userId">User Id</label>
+                <div class="input-group">
                     <input type="text" class="form-control" id="userId" value="" />
+                    <div class="input-group-btn">
+                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Select User <span class="caret"></span></button>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <apex:repeat value="{!lineContacts}" var="contact">
+                                <li><a href="#" class="lineContact" data-userId="{!contact.lineId__c}">{!contact.name}</a></li>
+                            </apex:repeat>
+                        </ul>
+                    </div>
                 </div>
             </form>
         </div>
