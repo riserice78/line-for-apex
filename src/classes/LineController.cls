@@ -7,6 +7,11 @@ global class LineController {
     public String getAccessToken(){
         return CHANNEL_ACCESS_TOKEN;
     }
+    public List<Contact> getLineContacts(){
+        return [select id, lineId__c, name from Contact where lineId__c!=null];
+    }
+    
+    
     private Line_Template createTemplate(){
         return null;
     }
