@@ -1,12 +1,12 @@
 @RestResource(urlMapping='/restapi')
 global class LineController {
-    private static final String CHANNEL_ID = '';
-    private static final String CHANNEL_SECRET = '';
     private static final String CHANNEL_ACCESS_TOKEN = '';
 
     public LineController(){
     }
-
+    public String getAccessToken(){
+        return CHANNEL_ACCESS_TOKEN;
+    }
     private Line_Template createTemplate(){
         return null;
     }
