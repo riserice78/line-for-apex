@@ -28,7 +28,10 @@ global class LineController {
                 lineImageUrl__c = user.getPictureUrl(),
                 lineDisplayName__c = user.getDisplayName(),
                 lineIsFollowed__c = true
-            );            
+            );
+        }else{
+            contact.lineIsFollowed__c = true;
+            return contact;
         }
         return null;
     }
@@ -54,8 +57,9 @@ global class LineController {
                 if(newContact!=null){
                     contacts.add( newContact );
                 }
-            }else if(Line_Service.isEventUnfollow(event)){
-              
+            }else if(Line_Service.isEventUnfollow(event) && Line_Service.isSourceUser(event.getSource())){
+                Line_UserSource source = (Line_UserSource)event.getSource();
+                contacts.add( setContactLineStatus(source.getUserId(), false) );                
             }else if ( Line_Service.isEventPostback(event) ){
                     contacts.add( new Contact(lastName  = 'postback ', description=requestBody) );
             }else{
