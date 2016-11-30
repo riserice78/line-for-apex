@@ -23,8 +23,8 @@ How to setup
   4. Add "https://api.line.me" to the remote site settings
   5. Go to Line Business Center(https://business.line.me/ja/)
     5.1 Click on "Line@Manager" button for your developer trial line account
-      - Click on Settings, then choose Bot Settings
-      - In "Use webhooks", choose "Allow"
+      - Click on Settings, then choose Bot Settings（日本語の場合、アカウント設定＞Bot設定）
+      - In "Use webhooks", choose "Allow"
     5.2 Back in the Line Business Center page, click on "Line Developers" for your developer trial line account
       - Set the webhook url to be your force.com site (step 3) + "/services/apexrest/restapi"
       - Copy the Channel Access Token and paste it into the LineController apex class's CHANNEL_ACCESS_TOKEN variable.
