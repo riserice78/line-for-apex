@@ -7,6 +7,11 @@ public class Line_Column{
     private final String text;
     /* Action when tapped. Max: 3 */
     private Line_Action[] actions;
+    
+    /* for js remote object wrapping */
+    private Line_UriAction[] uriActions;
+    private Line_MessageAction[] messageActions;
+    private Line_PostbackAction[] postbackActions;
 
     public Line_Column(String text, Line_Action[] actions){
         this.text = text;
@@ -21,8 +26,29 @@ public class Line_Column{
     public Line_Column(String title, String text, Line_Action[] actions){
         this.title = title;
         this.text = text;
-        this.actions = actions;    
+        this.actions = actions;
     }
+    
+    public void setActions(Line_Action[] actions){
+        this.actions = actions;
+    }
+
+    public void setConcreteActions(Line_UriAction[] uriActions, Line_MessageAction[] messageActions, Line_PostbackAction[] postbackActions){
+        this.uriActions = uriActions;
+        this.messageActions = messageActions;
+        this.postbackActions = postbackActions;
+    }
+    
+    public Line_UriAction[] getUriActions(){
+        return uriActions;
+    }
+    public Line_MessageAction[] getMessageActions(){
+        return messageActions;
+    }
+    public Line_PostbackAction[] getPostbackActions(){
+        return postbackActions;
+    }
+
     public String getThumbnailImageUrl(){
         return thumbnailImageUrl;
     }
