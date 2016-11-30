@@ -5,7 +5,7 @@ The following instructions assume that you have a developer trial Line account. 
 
 <b>Installation by Unmanaged Packaged</b><br/>
 https://goo.gl/wnZAVr
-<br/>
+<br/><br/><br/>
 <b>Installation by Deploy to Salesforce button</b><br/>
   1. Before deploying, create the following fields in the Contact object:
     - lineId (text)
@@ -17,7 +17,7 @@ https://goo.gl/wnZAVr
   <img alt="Deploy to Salesforce"
        src="https://raw.githubusercontent.com/afawcett/githubsfdeploy/master/deploy.png">
 </a>
-
+<br/><br/>
 <b>Setup</b>
 <pre>
 1. Create the line callback site
