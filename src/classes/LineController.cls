@@ -1,19 +1,26 @@
 @RestResource(urlMapping='/restapi')
 global class LineController {
-    private static final String CHANNEL_ACCESS_TOKEN = '';
+    private static String CHANNEL_ACCESS_TOKEN = '';
 
     public LineController(){
     }
+    public String getVideoUrl(){
+        return 'https://linebottestwrapper-developer-edition.ap2.force.com/resource/sampleVideo';
+    }
+    public String getImageUrl1(){
+        return 'https://linebottestwrapper-developer-edition.ap2.force.com/resource/sampleImage1';
+    }
+    public String getImageUrl2(){
+        return 'https://linebottestwrapper-developer-edition.ap2.force.com/resource/sampleImage2';
+    }
+    public String getAudioUrl(){
+        return 'https://linebottestwrapper-developer-edition.ap2.force.com/resource/sampleAudio';
+    }
     public String getAccessToken(){
         return CHANNEL_ACCESS_TOKEN;
-    }
+    }    
     public List<Contact> getLineContacts(){
         return [select id, lineId__c, name from Contact where lineId__c!=null];
-    }
-    
-    
-    private Line_Template createTemplate(){
-        return null;
     }
 
     private static Contact createContact(String userId){
@@ -28,7 +35,7 @@ global class LineController {
                 lineImageUrl__c = user.getPictureUrl(),
                 lineDisplayName__c = user.getDisplayName(),
                 lineIsFollowed__c = true
-            );
+            );            
         }else{
             contact.lineIsFollowed__c = true;
             return contact;
@@ -49,7 +56,8 @@ global class LineController {
     global static String doPost(){
         List<Contact> contacts = new List<Contact>();
         String requestBody = RestContext.request.requestBody.toString();
-        contacts.add( new Contact(lastName  = 'request: ', description=requestBody) );
+        contacts.add( new Contact(lastName  = '<message>', description=requestBody) );
+
         for(Line_Event event: Line_Builder.deserializeEvents(requestBody)){
             if(Line_Service.isEventFollow(event) && Line_Service.isSourceUser(event.getSource()) ){
                 Line_UserSource source = (Line_UserSource)event.getSource();
@@ -60,11 +68,11 @@ global class LineController {
             }else if(Line_Service.isEventUnfollow(event) && Line_Service.isSourceUser(event.getSource())){
                 Line_UserSource source = (Line_UserSource)event.getSource();
                 contacts.add( setContactLineStatus(source.getUserId(), false) );                
-            }else if ( Line_Service.isEventPostback(event) ){
+            }/*else if ( Line_Service.isEventPostback(event) ){
                     contacts.add( new Contact(lastName  = 'postback ', description=requestBody) );
             }else{
                     contacts.add( new Contact(lastName  = 'else ', description=requestBody) );            
-            }
+            }*/
         }
 
         if(contacts!=null && contacts.size()>0){
@@ -142,5 +150,83 @@ global class LineController {
         messages.add( new Line_ImageMapMessage(baseUrl, altText, baseSize, actions) );
         Line_PushMessage pushMessage = new Line_PushMessage(userId, messages);
         return Line_Service.pushMessage(pushMessage, accessToken);
+    }
+    private static List<Line_Action> createActionsArray(Line_UriAction[] uriActions, Line_MessageAction[] messageActions, Line_PostbackAction[] postbackActions){
+        List<Line_Action> actions = new List<Line_Action>();
+        for(Line_UriAction action: uriActions){
+            actions.add(action);
+        }
+        for(Line_MessageAction action: messageActions){
+            actions.add(action);
+        }
+        for(Line_PostbackAction action: postbackActions){
+            actions.add(action);
+        }
+        return actions;    
+    }
+    @RemoteAction
+    public static String pushConfirmTemplateToLine(String accessToken, String userId, String text, Line_UriAction[] uriActions, Line_MessageAction[] messageActions, Line_PostbackAction[] postbackActions){
+        List<Line_Action> actions = createActionsArray(uriActions, messageActions, postbackActions);
+        List< Line_TemplateMessage > messages = new List< Line_TemplateMessage >();
+        messages.add( new Line_TemplateMessage (text, new Line_ConfirmTemplate(text, actions) ) );
+        Line_PushMessage pushMessage = new Line_PushMessage(userId, messages);
+        return Line_Service.pushMessage(pushMessage, accessToken);
+    }
+    
+    @RemoteAction
+    public static String pushButtonTemplateToLine(String accessToken, String userId, String thumbnailImageUrl, String title, String text, Line_UriAction[] uriActions, Line_MessageAction[] messageActions, Line_PostbackAction[] postbackActions){
+        List<Line_Action> actions = createActionsArray(uriActions, messageActions, postbackActions);
+        List< Line_TemplateMessage > messages = new List< Line_TemplateMessage >();
+        if(!String.isEmpty(thumbnailImageUrl) && !String.isEmpty(title)){
+            messages.add( new Line_TemplateMessage (text, new Line_ButtonsTemplate(thumbnailImageUrl, title, text, actions) ) );
+        }else if(String.isEmpty(thumbnailImageUrl) && !String.isEmpty(title)){
+            messages.add( new Line_TemplateMessage (text, new Line_ButtonsTemplate(title, text, actions) ) );        
+        }else if(String.isEmpty(thumbnailImageUrl) && String.isEmpty(title)){
+            messages.add( new Line_TemplateMessage (text, new Line_ButtonsTemplate(text, actions) ) );
+        }
+        Line_PushMessage pushMessage = new Line_PushMessage(userId, messages);
+        return Line_Service.pushMessage(pushMessage, accessToken);
+    }
+
+    @RemoteAction
+    public static Line_Column createColumnObject(String thumbnailImageUrl, String title, String text, Line_UriAction[] uriActions, Line_MessageAction[] messageActions, Line_PostbackAction[] postbackActions){
+        Line_Column column = null;
+        if(!String.isEmpty(thumbnailImageUrl) && !String.isEmpty(title)){
+            column = new Line_Column (thumbnailImageUrl, title, text, null);
+            column.setConcreteActions(uriActions, messageActions, postbackActions);
+        }else if(String.isEmpty(thumbnailImageUrl) && !String.isEmpty(title)){
+            column = new Line_Column (title, text, null);
+            column.setConcreteActions(uriActions, messageActions, postbackActions);
+        }else if(String.isEmpty(thumbnailImageUrl) && String.isEmpty(title)){
+            column = new Line_Column (text, null);
+            column.setConcreteActions(uriActions, messageActions, postbackActions);
+        }
+        return column;        
+    }    
+
+    @RemoteAction
+    public static String pushCarouselTemplateToLine(String accessToken, String userId, Line_Column[] columns){
+        for(Integer i=0; i<columns.size(); i++){
+            Line_Column column = columns.get(i);
+            List<Line_Action> actions = createActionsArray(column.getUriActions(), column.getMessageActions(), column.getPostbackActions());
+            column.setActions(actions);            
+            columns.set(i, column);
+        }        
+        List< Line_TemplateMessage > messages = new List< Line_TemplateMessage >();
+        messages.add( new Line_TemplateMessage ('alt text', new Line_CarouselTemplate(columns) ));
+        Line_PushMessage pushMessage = new Line_PushMessage(userId, messages);
+        return Line_Service.pushMessage(pushMessage, accessToken);
+    }
+   
+    @RemoteAction
+    public static String requestUserProfile(String accessToken, String userId){
+        String jsonStr = Line_Service.getUserProfile(userId, accessToken);
+        //Line_UserProfile user = Line_Builder.deserializeUserProfile(jsonStr);
+        return jsonStr;
+    }
+    @RemoteAction
+    public static String reply(String accessToken){
+        String json = '{"replyToken" : "abaae5cef8d743bb89a7fcbf66d26a46","messages" : [ {"type" : "text","text" : "W"} ]}';
+        return Line_Service.replyMessage(json, accessToken);
     }
 }
