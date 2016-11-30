@@ -25,6 +25,7 @@ https://goo.gl/wnZAVr
     - Set the site guest user profile to have access to
       - LineController apex class
       - Create permission for Contact object
+      - セキュアな接続 (HTTPS) が必要 = true
 2. Add "https://api.line.me" to the remote site settings
 3. Go to Line Business Center(https://business.line.me/ja/)
     3.1 Click on "Line@Manager" button for your developer trial line account
