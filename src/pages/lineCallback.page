@@ -27,8 +27,21 @@
             margin: 0px 1% 10px;
             display: inline-block;
         }
+        .lineContact{
+            padding: 0 10px;
+            cursor: pointer;        
+        }
         .hidden{
             display: none !important;
+        }
+        .columnItem{
+            background: #eee;
+            padding: 5px 10px;
+            margin: 10px 0 0;
+        }
+        .actionItem{
+            border-bottom: 1px solid olive;
+            padding: 10px;        
         }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
@@ -36,7 +49,24 @@
         $(document).on('ready', function(){
             var callback = function(result){
                 console.log('result: ', result);
+                result = result.replace('{', '').replace('}', '');
+
+                var e = $('<div>');
+                e.html(result);
+                if(e.html()!=null){
+                    alert( e.html() );
+                }else{
+                    alert('message sent');
+                }
             };
+            $('#requestUserProfile').on('click', function(event) {  
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.requestUserProfile}', 
+                    $('#accessToken').val(), $('#userId').val(), callback);
+            });
+            $('#replyToUser').on('click', function(event) {  
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.reply}', 
+                    $('#accessToken').val(), callback);
+            });
             $('#sendTextMessage').on('click', function(event) {  
                 var $formContainer = $(this).closest('.formContainer');
                 console.log('form: ', $formContainer.find('.message').val());
@@ -109,17 +139,239 @@
                     $('#accessToken').val(), $('#userId').val(), $formContainer.find('.baseUrl').val(), 
                     $formContainer.find('.altText').val(), baseSize, uriActions, messageActions, callback);
             });
+            
+            var getTemplateAction = function($actionItem){
+                if($actionItem.find('.templateAction').val() == 'message'){
+                    return {
+                        type: 'message',
+                        label: $actionItem.find('.messageLabel').val(),
+                        text: $actionItem.find('.messageText').val(),
+                    };
+                }else if($actionItem.find('.templateAction').val() == 'uri'){
+                    return {
+                        type: 'uri',
+                        label: $actionItem.find('.messageLabel').val(),
+                        uri: $actionItem.find('.linkUri').val(),
+                    };
+                }else if($actionItem.find('.templateAction').val() == 'postback'){
+                    return {
+                        type: 'postback',
+                        label: $actionItem.find('.messageLabel').val(),
+                        text: $actionItem.find('.messageText').val(),
+                        data: $actionItem.find('.postbackData').val(),
+                    };
+                }
+                return {};
+            };
 
-            $('.addAction').on('click', function(){
-                var $container = $(this).closest('.actionContainer');
-                //TO DO
+            $('#sendConfirmTemplate').on('click', function(event){
+                var $formContainer = $(this).closest('.formContainer');
+                var uriActions = [];
+                var messageActions = [];
+                var postbackActions = [];
+                $formContainer.find('.actionItem').each(function(){
+                    var actionItemObj = getTemplateAction( $(this) );
+                    if(actionItemObj.type == 'message'){
+                        messageActions.push( actionItemObj );
+                    }else if(actionItemObj.type == 'uri'){
+                        uriActions.push( actionItemObj );
+                    }else if(actionItemObj.type == 'postback'){
+                        postbackActions.push( actionItemObj );
+                    }
+                });
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushConfirmTemplateToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.text').val(), 
+                    uriActions, messageActions, postbackActions, callback);            
             });
-            $('.imageMapAction').on('change', function(){
-                var selected = $('option:selected', this);
-                var $container = $(this).closest('.actionContainer');
-                $container.find('.typeDependentField').addClass('hidden');
-                $container.find('.'+$(selected).attr('data-show')).removeClass('hidden');
+            $('#sendButtonTemplate').on('click', function(event){
+                var $formContainer = $(this).closest('.formContainer');
+                var uriActions = [];
+                var messageActions = [];
+                var postbackActions = [];
+                $formContainer.find('.actionItem').each(function(){
+                    var actionItemObj = getTemplateAction( $(this) );
+                    if(actionItemObj.type == 'message'){
+                        messageActions.push( actionItemObj );
+                    }else if(actionItemObj.type == 'uri'){
+                        uriActions.push( actionItemObj );
+                    }else if(actionItemObj.type == 'postback'){
+                        postbackActions.push( actionItemObj );
+                    }
+                });
+                Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushButtonTemplateToLine}', 
+                    $('#accessToken').val(), $('#userId').val(), $formContainer.find('.thumbnailImageUrl').val(),
+                    $formContainer.find('.title').val(), $formContainer.find('.text').val(), 
+                    uriActions, messageActions, postbackActions, callback);            
             });
+            $('#sendCarouselTemplate').on('click', function(event){
+                var index = 0;
+                var $columns = $(this).closest('.formContainer').find('.columnItem');
+                var columns = [];
+                var createColumnObj = function(columnContainer){
+                    var $columnContainer = $(columnContainer)
+                    if(index==$columns.length){
+                        console.log('push to line: ', columns);
+                        Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.pushCarouselTemplateToLine}', 
+                            $('#accessToken').val(), $('#userId').val(), columns, callback);
+                    }else{
+                        var uriActions = [];
+                        var messageActions = [];
+                        var postbackActions = [];
+                        $columnContainer.find('.actionItem').each(function(){
+                            var actionItemObj = getTemplateAction( $(this) );
+                            if(actionItemObj.type == 'message'){
+                                messageActions.push( actionItemObj );
+                            }else if(actionItemObj.type == 'uri'){
+                                uriActions.push( actionItemObj );
+                            }else if(actionItemObj.type == 'postback'){
+                                postbackActions.push( actionItemObj );
+                            }
+                        });
+                        Visualforce.remoting.Manager.invokeAction('{!$RemoteAction.LineController.createColumnObject}', 
+                            $columnContainer.find('.thumbnailImageUrl').val(), $columnContainer.find('.title').val(), 
+                            $columnContainer.find('.text').val(), uriActions, messageActions, postbackActions, 
+                            function(result){
+                                columns.push(result);
+                                createColumnObj($columns[++index]);
+                            });
+                    }
+                };
+                createColumnObj($columns[index]);
+            });
+            
+            var createAction = function(length){
+                var createTypeInputFieldHtml = function(){
+                    var html = '<div class="form-group">';
+                    html += '<label for="actionType">Type</label>';
+                    html += '<select class="templateAction">';
+                    html += '<option value="uri" selected="true" data-show="uriField">URI</option>';
+                    html += '<option value="message" data-show="messageField">Message</option>';
+                    html += '<option value="postback" data-show="postbackField">Postback</option>';
+                    html += '</select>';
+                    html += '</div>';
+                    return html;                
+                };
+                var createLabelInputFieldHtml = function(){
+                    var html = '<div class="messageField uriField postbackField form-group typeDependentField">';
+                    html += '<label for="messageLabel">Label</label>';
+                    html += '<input type="text" max="20" class="form-control messageLabel" value="' + length + '" />';
+                    html += '</div>';
+                    return html;
+                };
+                var createTextInputFieldHtml = function(){
+                    var html = '<div class="messageField postbackField form-group hidden typeDependentField">';
+                    html += '<label for="messageText">Text</label>';
+                    html += '<input type="text" max="300" class="form-control messageText" value="' + length + '" />';
+                    html += '</div>';
+                    return html;
+                };
+                var createUriInputFieldHtml = function(){
+                    var html = '<div class="uriField form-group typeDependentField">';
+                    html += '<label for="linkUri">Uri</label>';
+                    html += '<input type="text" max="1000" class="form-control linkUri" value="https://salesforce.com" />';
+                    html += '</div>';
+                    return html;
+                };
+                var createPostbackInputFieldHtml = function(){
+                    var html = '<div class="postbackField form-group hidden typeDependentField">';
+                    html += '<label for="postbackData">Data</label>';
+                    html += '<input type="text" max="300" class="form-control postbackData" value="?answer=' + length + '" />';
+                    html += '</div>';
+                    return html;
+                };
+                var createActionHtml = function(){
+                    var html = '<div class="actionItem">';
+                    html += createTypeInputFieldHtml();
+                    html += createLabelInputFieldHtml();
+                    html += createTextInputFieldHtml();
+                    html += createUriInputFieldHtml();
+                    html += createPostbackInputFieldHtml();
+                    html += '</div>';
+                    return html;
+                };
+                return createActionHtml();
+            };
+            
+            var initAddAction = function($elem){
+                $elem.on('click', function(){
+                    var $container = $(this).closest('.actionContainer');
+                    var max = parseInt($container.attr('data-max'));
+                    var length = $container.find('.actionItem').length;
+                    if(length == max){
+                        alert('You have reached the maximum number of actions for this template');
+                        return false;
+                    }
+                    $container.find('.panel-body').append( createAction( length + 1) );
+                    initActionTypeChange( $container.find('.templateAction').last() );                
+                });
+            };
+
+            $('.addTemplateColumn').on('click', function(){
+                var $container = $(this).closest('.columnContainer');
+                var max = parseInt($container.attr('data-max'));
+                var length = $container.find('.columnItem').length;
+                if(length == max){
+                    alert('You have reached the maximum number of columns');
+                    return false;
+                }
+                var createThumbnailInputFieldHtml = function(){
+                    var html = '<div class="form-group">';
+                    html += '<label for="thumbnailImageUrl">Thumbnail Image Url</label>';
+                    html += '<input type="text" class="form-control thumbnailImageUrl" value="{!imageUrl2}" max="1000"/>';
+                    html += '</div>';
+                    return html;
+                };
+                var createTitleInputFieldHtml = function(){
+                    var html = '<div class="form-group">';
+                    html += '<label for="title">Title</label>';
+                    html += '<input type="text" class="form-control title" value="column ' + length + '" max="40"/>';
+                    html += '</div>';
+                    return html;
+                };
+                var createTextInputFieldHtml = function(){
+                    var html = '<div class="form-group">';
+                    html += '<label for="text">Text</label>';
+                    html += '<input type="text" class="form-control text" value="yeho" max="160"/>';
+                    html += '</div>';
+                    return html;
+                };
+                var createColumn = function(length){
+                    var html = '<div class="columnItem">';
+                    html += createThumbnailInputFieldHtml();
+                    html += createTitleInputFieldHtml();
+                    html += createTextInputFieldHtml();
+                    html += '<div class="panel panel-default actionContainer" data-max="3">';
+                    html += '<div class="panel-heading">Actions (Max: 3) ';
+                    html += '<button type="button" class="btn btn-default addTemplateAction" aria-label="Plus">';
+                    html += '<span class="glyphicon glyphicon-plus" aria-hidden="true"></span>';
+                    html += '</button>';
+                    html += '</div>';
+                    html += '<div class="panel-body">';
+                    html += '</div>';
+                    html += '</div>';
+                    return html;
+                };
+                $container.find('.columnsPanel').append( createColumn( length + 1) );
+                var $column = $container.find('.columnItem').last();
+                $column.find('.panel-body').append( createAction( length + 1) );
+                initActionTypeChange( $column.find('.templateAction').last() );
+                initAddAction( $column.find('.addTemplateAction') );
+            });
+           
+            var initActionTypeChange = function($elem){
+                var toggleActionFields = function(selected, $container){
+                    $container.find('.typeDependentField').addClass('hidden');
+                    $container.find('.'+$(selected).attr('data-show')).removeClass('hidden');            
+                };
+                $elem.on('change', function(){
+                    toggleActionFields($('option:selected', this), $(this).closest('.actionItem'));
+                });
+            };
+
+            initAddAction( $('.addTemplateAction') );
+            initActionTypeChange($('.templateAction'));
+            initActionTypeChange($('.imageMapAction'));            
+
             $('.lineContact').on('click', function(){
                 $('#userId').val($(this).attr('data-userId'));
                 $(this).closest('.dropdown-menu').hide();
@@ -127,6 +379,7 @@
             $('.dropdown-toggle').on('click', function(){
                 $(this).siblings('.dropdown-menu').toggle();
             });
+
         });
     </script>
 </head>
@@ -148,12 +401,16 @@
                         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Select User <span class="caret"></span></button>
                         <ul class="dropdown-menu dropdown-menu-right">
                             <apex:repeat value="{!lineContacts}" var="contact">
-                                <li><a href="#" class="lineContact" data-userId="{!contact.lineId__c}">{!contact.name}</a></li>
+                                <li class="lineContact" data-userId="{!contact.lineId__c}">{!contact.name}</li>
                             </apex:repeat>
                         </ul>
                     </div>
                 </div>
             </form>
+        </div>
+        <div class="btn-group buttonGroupContainer" role="group">
+            <button type="button" class="btn btn-default" id="requestUserProfile">User Profile</button>
+            <button type="button" class="btn btn-default" id="replyToUser" disabled="true">Reply</button>
         </div>
         <div class="btn-group buttonGroupContainer" role="group">
             <button type="button" class="btn btn-default"><a href="#textMessageForm">Text</a></button>
@@ -167,9 +424,9 @@
             <button type="button" class="btn btn-default" disabled="true"><a href="#imageMapMessageForm">Image Map</a></button>
         </div>
         <div class="btn-group buttonGroupContainer" role="group">
-            <button type="button" class="btn btn-default" disabled="true"><a href="#imageMessageForm">Button Template</a></button>
-            <button type="button" class="btn btn-default" disabled="true"><a href="#videoMessageForm">Confirm Template</a></button>
-            <button type="button" class="btn btn-default" disabled="true"><a href="#audioMessageForm">Carousel Template</a></button>
+            <button type="button" class="btn btn-default"><a href="#buttonTemplateForm">Button Template</a></button>
+            <button type="button" class="btn btn-default"><a href="#confirmTemplateForm">Confirm Template</a></button>
+            <button type="button" class="btn btn-default"><a href="#carouselTemplateForm">Carousel Template</a></button>
         </div>
     </nav>
 
@@ -207,7 +464,7 @@
             <form>
                 <div class="form-group">
                     <label for="message">Original Content Url</label>
-                    <input type="text" class="form-control originalContentUrl"  max="1000" value="https://example.com/original.mp4" />
+                    <input type="text" class="form-control originalContentUrl"  max="1000" value="{!videoUrl}" />
                 </div>
                 <div class="form-group">
                     <label for="message">Preview Image Url</label>
@@ -223,11 +480,11 @@
             <form>
                 <div class="form-group">
                     <label for="message">Original Content Url</label>
-                    <input type="text" class="form-control originalContentUrl" max="1000" value="https://example.com/original.m4a" />
+                    <input type="text" class="form-control originalContentUrl" max="1000" value="{!audioUrl}" />
                 </div>
                 <div class="form-group">
                     <label for="message">Duration</label>
-                    <input type="number" class="form-control duration"  value="240000" />
+                    <input type="number" class="form-control duration"  value="3000" />
                 </div>
                 <button type="submit" id="sendAudioMessage" class="btn btn-default">Send</button>
             </form>
@@ -279,7 +536,7 @@
             <form>
                 <div class="form-group">
                     <label for="baseUrl">Base Url</label>
-                    <input type="text" class="form-control baseUrl" max="1000" value="https://cdn.pixabay.com/photo/2016/08/07/15/02/blueberries-1576407_960_720.jpg" />
+                    <input type="text" class="form-control baseUrl" max="1000" value="{!imageUrl1}" />
                 </div>
                 <div class="form-group">
                     <label for="altText">Alt Text</label>
@@ -287,11 +544,11 @@
                 </div>
                 <div class="form-group">
                     <label for="baseSizeWidth">Base Size Width</label>
-                    <input type="number" class="form-control baseSizeWidth" value="1040" />
+                    <input type="number" class="form-control baseSizeWidth" value="828" />
                  </div>
                 <div class="form-group">
                     <label for="baseSizeHeight">Base Size Height</label>
-                    <input type="number" class="form-control baseSizeHeight" value="1040" />
+                    <input type="number" class="form-control baseSizeHeight" value="694" />
                  </div>
                 <div class="panel panel-default actionContainer">
                     <div class="panel-heading">Actions
@@ -310,7 +567,7 @@
                              </div>
                              <div class="uriField form-group typeDependentField">
                                 <label for="linkUri">Link Uri</label>
-                                <input type="text" max="1000" class="form-control linkUri " value="https://example.com/" />                         
+                                <input type="text" max="1000" class="form-control linkUri " value="https://www.salesforce.com/" />                         
                              </div>
                              <div class="messageField form-group hidden typeDependentField">
                                 <label for="messageText">Message</label>
@@ -326,16 +583,190 @@
                              </div>
                              <div class="form-group">
                                 <label for="imageMapWidth">Area Width</label>
-                                <input type="number" class="form-control imageMapWidth" value="520" />                         
+                                <input type="number" class="form-control imageMapWidth" value="300" />                         
                              </div>
                              <div class="form-group">
                                 <label for="imageMapHeight">Area Height</label>
-                                <input type="number" class="form-control imageMapHeight" value="1040" />                         
+                                <input type="number" class="form-control imageMapHeight" value="300" />                         
                              </div>
                         </div>
                     </div>
-                </div>                
+                </div>
                 <button type="submit" id="sendImageMapMessage" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="formContainer panel panel-default" id="confirmTemplateForm">
+        <div class="panel-heading">Confirm Template</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="message">Text</label>
+                    <input type="text" class="form-control text" value="yeho" max="240"/>
+                </div>
+                <div class="panel panel-default actionContainer" data-max="2">
+                    <div class="panel-heading">Actions (Max: 2)
+                        <button type="button" class="btn btn-default addTemplateAction" aria-label="Plus">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="actionItem">
+                            <div class="form-group">
+                                <label for="actionType">Type</label>
+                                <select class="templateAction">
+                                    <option value="uri" selected="true" data-show="uriField">URI</option>
+                                    <option value="message" data-show="messageField">Message</option>
+                                    <option value="postback" data-show="postbackField">Postback</option>
+                                </select>
+                             </div>
+                             <div class="messageField uriField postbackField form-group typeDependentField">
+                                <label for="messageLabel">Label</label>
+                                <input type="text" max="20" class="form-control messageLabel" value="Yes" />                         
+                             </div>
+                             <div class="messageField postbackField form-group hidden typeDependentField">
+                                <label for="messageText">Text</label>
+                                <input type="text" max="300" class="form-control messageText" value="yes" />                         
+                             </div>
+                             <div class="uriField form-group typeDependentField">
+                                <label for="linkUri">Uri</label>
+                                <input type="text" max="1000" class="form-control linkUri" value="https://salesforce.com" />
+                             </div>
+                             <div class="postbackField form-group hidden typeDependentField">
+                                <label for="postbackData">Data</label>
+                                <input type="text" max="300" class="form-control postbackData" value="?answer=yes" />                         
+                             </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" id="sendConfirmTemplate" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="formContainer panel panel-default" id="buttonTemplateForm">
+        <div class="panel-heading">Button Template</div>
+        <div class="panel-body">
+            <form>
+                <div class="form-group">
+                    <label for="thumbnailImageUrl">Thumbnail Image Url</label>
+                    <input type="text" class="form-control thumbnailImageUrl" value="{!imageUrl1}" max="1000"/>
+                </div>
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" class="form-control title" value="hola" max="40"/>
+                </div>
+
+                <div class="form-group">
+                    <label for="text">Text</label>
+                    <input type="text" class="form-control text" value="yeho" max="160"/>
+                </div>
+                <div class="panel panel-default actionContainer" data-max="4">
+                    <div class="panel-heading">Actions (Max: 4)
+                        <button type="button" class="btn btn-default addTemplateAction" aria-label="Plus">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="panel-body">
+                        <div class="actionItem">
+                            <div class="form-group">
+                                <label for="actionType">Type</label>
+                                <select class="templateAction">
+                                    <option value="uri" selected="true" data-show="uriField">URI</option>
+                                    <option value="message" data-show="messageField">Message</option>
+                                    <option value="postback" data-show="postbackField">Postback</option>
+                                </select>
+                             </div>
+                             <div class="messageField uriField postbackField form-group typeDependentField">
+                                <label for="messageLabel">Label</label>
+                                <input type="text" max="20" class="form-control messageLabel" value="Yes" />                         
+                             </div>
+                             <div class="messageField postbackField form-group hidden typeDependentField">
+                                <label for="messageText">Text</label>
+                                <input type="text" max="300" class="form-control messageText" value="yes" />                         
+                             </div>
+                             <div class="uriField form-group typeDependentField">
+                                <label for="linkUri">Uri</label>
+                                <input type="text" max="1000" class="form-control linkUri" value="https://salesforce.com" />
+                             </div>
+                             <div class="postbackField form-group hidden typeDependentField">
+                                <label for="postbackData">Data</label>
+                                <input type="text" max="300" class="form-control postbackData" value="?answer=yes" />                         
+                             </div>
+
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" id="sendButtonTemplate" class="btn btn-default">Send</button>
+            </form>
+        </div>
+    </div>
+
+
+    <div class="formContainer panel panel-default" id="carouselTemplateForm">
+        <div class="panel-heading">Carousel Template</div>
+        <div class="panel-body">
+            <form>
+                <div class="panel panel-default columnContainer" data-max="5">
+                    <div class="panel-heading">Columns (Max: 5)
+                        <button type="button" class="btn btn-default addTemplateColumn" aria-label="Plus">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <div class="panel-body columnsPanel">
+                        <div class="columnItem">
+                            <div class="form-group">
+                                <label for="thumbnailImageUrl">Thumbnail Image Url</label>
+                                <input type="text" class="form-control thumbnailImageUrl" value="{!imageUrl1}" max="1000"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="title">Title</label>
+                                <input type="text" class="form-control title" value="hola" max="40"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="text">Text</label>
+                                <input type="text" class="form-control text" value="yeho" max="160"/>
+                            </div>
+                            <div class="panel panel-default actionContainer" data-max="3">
+                                <div class="panel-heading">Actions (Max: 3)
+                                    <button type="button" class="btn btn-default addTemplateAction" aria-label="Plus">
+                                        <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>
+                                    </button>
+                                </div>
+                                <div class="panel-body">
+                                    <div class="actionItem">
+                                        <div class="form-group">
+                                            <label for="actionType">Type</label>
+                                            <select class="templateAction">
+                                                <option value="uri" selected="true" data-show="uriField">URI</option>
+                                                <option value="message" data-show="messageField">Message</option>
+                                                <option value="postback" data-show="postbackField">Postback</option>
+                                            </select>
+                                         </div>
+                                         <div class="messageField uriField postbackField form-group typeDependentField">
+                                            <label for="messageLabel">Label</label>
+                                            <input type="text" max="20" class="form-control messageLabel" value="Yes" />                         
+                                         </div>
+                                         <div class="messageField postbackField form-group hidden typeDependentField">
+                                            <label for="messageText">Text</label>
+                                            <input type="text" max="300" class="form-control messageText" value="yes" />                         
+                                         </div>
+                                         <div class="uriField form-group typeDependentField">
+                                            <label for="linkUri">Uri</label>
+                                            <input type="text" max="1000" class="form-control linkUri" value="https://salesforce.com" />
+                                         </div>
+                                         <div class="postbackField form-group hidden typeDependentField">
+                                            <label for="postbackData">Data</label>
+                                            <input type="text" max="300" class="form-control postbackData" value="?answer=yes" />                         
+                                         </div>            
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" id="sendCarouselTemplate" class="btn btn-default">Send</button>
             </form>
         </div>
     </div>
