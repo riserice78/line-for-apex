@@ -1,7 +1,10 @@
 public class Line_Builder{
     private static final String JSON_EVENT = 'events';
     private static final String JSON_TO = 'to';
+    private static final String JSON_ID = 'id';   
+    private static final String JSON_MESSAGE = 'message';
     private static final String JSON_MESSAGES = 'messages';
+    private static final String JSON_POSTBACK = 'postback';
     private static final String JSON_TYPE = 'type';
     private static final String JSON_ALTTEXT = 'altText';
     private static final String JSON_TEMPLATE = 'template';
@@ -9,6 +12,7 @@ public class Line_Builder{
     private static final String JSON_THUMBNAILIMAGEURL = 'thumbnailImageUrl';
     private static final String JSON_TITLE = 'title';
     private static final String JSON_LABEL = 'label';
+    private static final String JSON_URI = 'uri';
     private static final String JSON_DATA = 'data';
     private static final String JSON_TEXT = 'text';
     private static final String JSON_IMAGE = 'image';
@@ -48,11 +52,19 @@ public class Line_Builder{
     private static final String SOURCE_TYPE_USER = 'user';
     private static final String ACTION_TYPE_POSTBACK = 'postback';
     private static final String ACTION_TYPE_URI = 'uri';
+    private static final String ACTION_TYPE_MESSAGE = 'message';
+   
     private static final String TEMPLATE_TYPE_BUTTONS = 'buttons';
     private static final String TEMPLATE_TYPE_CAROUSEL = 'carousel';
+    private static final String TEMPLATE_TYPE_CONFIRM = 'confirm';
+   
     private static final String EVENT_TYPE_FOLLOW = 'follow';
-    private static final String EVENT_TYPE_UNFOLLOW = 'unfollow';    
+    private static final String EVENT_TYPE_MESSAGE = 'message';
+    private static final String EVENT_TYPE_UNFOLLOW = 'unfollow';
+    private static final String EVENT_TYPE_POSTBACK = 'postback';
 
+    private static final String MESSAGE_TYPE_TEXT = 'text';
+    
     private static JSONGenerator buildPostbackActionJson(JSONGenerator gen, Line_PostbackAction action){
             gen.writeStartObject();
             gen.writeStringField(JSON_TYPE, action.getType());
@@ -61,7 +73,22 @@ public class Line_Builder{
             gen.writeEndObject();    
             return gen;
     }
-
+    private static JSONGenerator buildMessageActionJson(JSONGenerator gen, Line_MessageAction action){
+            gen.writeStartObject();
+            gen.writeStringField(JSON_TYPE, action.getType());
+            gen.writeStringField(JSON_LABEL, action.getLabel()); 
+            gen.writeStringField(JSON_TEXT, action.getText());
+            gen.writeEndObject();    
+            return gen;
+    }
+    private static JSONGenerator buildUriActionJson(JSONGenerator gen, Line_UriAction action){
+            gen.writeStartObject();
+            gen.writeStringField(JSON_TYPE, action.getType());
+            gen.writeStringField(JSON_LABEL, action.getLabel()); 
+            gen.writeStringField(JSON_URI, action.getUri()); 
+            gen.writeEndObject();    
+            return gen;
+    }
     private static JSONGenerator buildActionsArrayJson(JSONGenerator gen, List<Line_Action> actions){
         gen.writeFieldName(JSON_ACTIONS);
         gen.writeStartArray();
@@ -69,6 +96,10 @@ public class Line_Builder{
             String type = action.getType();
             if(type.equals(ACTION_TYPE_POSTBACK)){
                 gen = buildPostbackActionJson(gen, (Line_PostbackAction)action);
+            }else if(type.equals(ACTION_TYPE_MESSAGE)){
+                gen = buildMessageActionJson(gen, (Line_MessageAction)action);
+            }else if(type.equals(ACTION_TYPE_URI)){
+                gen = buildUriActionJson(gen, (Line_UriAction)action);
             }
         }
         gen.writeEndArray();
@@ -77,13 +108,13 @@ public class Line_Builder{
 
 
     private static JSONGenerator buildColumnJson(JSONGenerator gen, Line_Column column){
-            gen.writeStartObject();
-            gen.writeStringField(JSON_THUMBNAILIMAGEURL, column.getThumbnailImageUrl());
-            gen.writeStringField(JSON_TITLE, column.getTitle());
-            gen.writeStringField(JSON_TEXT, column.getText());
-            gen = buildActionsArrayJson(gen, column.getActions());
-            gen.writeEndObject();
-            return gen;
+        gen.writeStartObject();
+        gen.writeStringField(JSON_THUMBNAILIMAGEURL, column.getThumbnailImageUrl());
+        gen.writeStringField(JSON_TITLE, column.getTitle());
+        gen.writeStringField(JSON_TEXT, column.getText());
+        gen = buildActionsArrayJson(gen, column.getActions());
+        gen.writeEndObject();
+        return gen;
     }
 
     private static JSONGenerator buildCarouselTemplateJson(JSONGenerator gen, Line_CarouselTemplate template){
@@ -102,6 +133,11 @@ public class Line_Builder{
         gen = buildActionsArrayJson(gen, template.getActions());    
         return gen;
     }
+    private static JSONGenerator buildConfirmTemplateJson(JSONGenerator gen, Line_ConfirmTemplate template){
+        gen.writeStringField(JSON_TEXT, template.getText());
+        gen = buildActionsArrayJson(gen, template.getActions());    
+        return gen;
+    }
     private static JSONGenerator buildTemplateJson(JSONGenerator gen, Line_Template template){
         gen.writeStartObject();       
         gen.writeStringField(JSON_TYPE, template.getType());
@@ -110,6 +146,8 @@ public class Line_Builder{
             gen = buildButtonsTemplateJson(gen, (Line_ButtonsTemplate)template);
         }else if(type.equals(TEMPLATE_TYPE_CAROUSEL)){
             gen = buildCarouselTemplateJson(gen, (Line_CarouselTemplate)template);
+        }else if(type.equals(TEMPLATE_TYPE_CONFIRM)){
+            gen = buildConfirmTemplateJson(gen, (Line_ConfirmTemplate)template );
         }
         gen.writeEndObject();
         return gen;
@@ -133,6 +171,9 @@ public class Line_Builder{
         gen.writeEndObject();
         return gen;
     }
+
+
+
 
     private static JSONGenerator buildImageMapActionsJson(JSONGenerator gen, List<Line_ImageMapAction> actions){
         gen.writeFieldName(JSON_ACTIONS);
@@ -194,6 +235,10 @@ public class Line_Builder{
             gen.writeStringField(JSON_ALTTEXT, imageMapMessage.getAltText());
             gen = buildBaseSizeJson(gen, imageMapMessage.getBaseSize());
             gen = buildImageMapActionsJson(gen, imageMapMessage.getActions());
+        }else if(type.equals(JSON_TEMPLATE)){
+            Line_TemplateMessage templateMessage = (Line_TemplateMessage)message;
+            gen.writeStringField(JSON_ALTTEXT, templateMessage.getAltText());
+            gen = buildTemplateJson(gen, templateMessage.getTemplate());
         }
         gen.writeEndObject();
         return gen;
@@ -209,6 +254,7 @@ public class Line_Builder{
         }
         gen.writeEndArray();
         gen.writeEndObject();
+        System.debug('json : ' + gen);
         return gen.getAsString();
     }
 
@@ -229,6 +275,7 @@ public class Line_Builder{
         String pictureUrl = (String)objMap.get(JSON_PICTUREURL);
         String statusMessage = (String)objMap.get(JSON_STATUSMESSAGE);
         return new Line_UserProfile(displayName, userId, pictureUrl, statusMessage);    
+
     }
 
     private static Line_Source buildSource(Map<String, Object> objMap){
@@ -245,12 +292,48 @@ public class Line_Builder{
                 String replyToken = (String)objMap.get(JSON_REPLYTOKEN); 
                 DateTime timestamp = DateTime.newInstance( (Long)objMap.get(JSON_TIMESTAMP) );
                 Line_Source source = buildSource((Map<String, Object>)objMap.get(JSON_SOURCE));
-                return new Line_FollowEvent(replyToken, timestamp, source);                
+                return new Line_FollowEvent(replyToken, timestamp, source);
             }else if(type.equals(EVENT_TYPE_UNFOLLOW)){
                 DateTime timestamp = DateTime.newInstance( (Long)objMap.get(JSON_TIMESTAMP) );
                 Line_Source source = buildSource((Map<String, Object>)objMap.get(JSON_SOURCE));
                 return new Line_UnfollowEvent(timestamp, source);
+            }else if(type.equals(EVENT_TYPE_MESSAGE)){
+                String replyToken = (String)objMap.get(JSON_REPLYTOKEN); 
+                DateTime timestamp = DateTime.newInstance( (Long)objMap.get(JSON_TIMESTAMP) );
+                Line_Source source = buildSource((Map<String, Object>)objMap.get(JSON_SOURCE));
+                Line_MessageEventContent message = buildMessageEventContent((Map<String, Object>)objMap.get(JSON_MESSAGE));
+                return new Line_MessageEvent(replyToken, timestamp, source, message);            
+            }else if(type.equals(EVENT_TYPE_POSTBACK)){
+                String replyToken = (String)objMap.get(JSON_REPLYTOKEN); 
+                DateTime timestamp = DateTime.newInstance( (Long)objMap.get(JSON_TIMESTAMP) );
+                Line_Source source = buildSource((Map<String, Object>)objMap.get(JSON_SOURCE));
+                Line_PostbackContent postback = buildPostbackEventContent((Map<String, Object>)objMap.get(JSON_POSTBACK));
+                return new Line_PostbackEvent(replyToken, postback, timestamp, source);            
             }
             return null;
+    }
+
+    private static Line_PostbackContent buildPostbackEventContent(Map<String, Object> objMap){
+        return new Line_PostbackContent( (String)objMap.get(JSON_DATA) );
+    }
+    private static Line_MessageEventContent buildMessageEventContent(Map<String, Object> objMap){
+        String type = (String)objMap.get(JSON_TYPE);            
+        if(type.equals(MESSAGE_TYPE_TEXT)){
+            return new Line_TextMessageEventContent((String)objMap.get(JSON_ID), (String)objMap.get(JSON_TEXT));
+        }    
+        return null;
+    }
+    public static String buildReplyMessageJson(Line_ReplyMessage replyMessage){
+        JSONGenerator gen = JSON.createGenerator(true);
+        gen.writeStartObject();
+        gen.writeStringField(JSON_REPLYTOKEN, replyMessage.getReplyToken());
+        gen.writeFieldName(JSON_MESSAGES);
+        gen.writeStartArray();
+        for(Line_Message message : replyMessage.getMessages()){
+            gen = buildMessageJson(gen, message);
+        }
+        gen.writeEndArray();
+        gen.writeEndObject();
+        return gen.getAsString();    
     }
 }
