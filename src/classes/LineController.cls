@@ -1,5 +1,6 @@
 @RestResource(urlMapping='/restapi')
 global class LineController {
+    private static String CHANNEL_SECRET = '';
     private static String CHANNEL_ACCESS_TOKEN = '';
 
     public LineController(){
@@ -56,8 +57,17 @@ global class LineController {
     global static String doPost(){
         List<Contact> contacts = new List<Contact>();
         String requestBody = RestContext.request.requestBody.toString();
-        contacts.add( new Contact(lastName  = '<message>', description=requestBody) );
+        
 
+        RestRequest req = RestContext.request;
+        String requestBody = req.requestBody.toString();
+        String digest = EncodingUtil.base64Encode(Crypto.generateMac('hmacSHA256', requestBody, Blob.valueOf(CHANNEL_SECRET)));
+        if (!req.headers.get('X-Line-Signature').equals(digest)) {
+            return 'FAIL';
+        }
+        
+        contacts.add( new Contact(lastName  = '<message>', description=requestBody) );
+        
         for(Line_Event event: Line_Builder.deserializeEvents(requestBody)){
             if(Line_Service.isEventFollow(event) && Line_Service.isSourceUser(event.getSource()) ){
                 Line_UserSource source = (Line_UserSource)event.getSource();
