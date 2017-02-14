@@ -320,7 +320,17 @@ public class Line_Builder{
         String type = (String)objMap.get(JSON_TYPE);            
         if(type.equals(MESSAGE_TYPE_TEXT)){
             return new Line_TextMessageEventContent((String)objMap.get(JSON_ID), (String)objMap.get(JSON_TEXT));
-        }    
+        } else if(type.equals(MESSAGE_TYPE_IMAGE)){
+            return new Line_ImageMessageEventContent((String)objMap.get(JSON_ID));
+        } else if(type.equals(MESSAGE_TYPE_VIDEO)){
+            return new Line_VideoMessageEventContent((String)objMap.get(JSON_ID));
+        } else if(type.equals(MESSAGE_TYPE_AUDIO)){
+            return new Line_AudioMessageEventContent((String)objMap.get(JSON_ID));
+        } else if(type.equals(MESSAGE_TYPE_LOCATION)){
+            return new Line_LocationMessageEventContent((String)objMap.get(JSON_ID), (String)objMap.get(JSON_TITLE), (String)objMap.get(JSON_ADDRESS), (Decimal)objMap.get(JSON_LATITUDE), (Decimal)objMap.get(JSON_LONGITUDE));
+        } else if(type.equals(MESSAGE_TYPE_STICKER)){
+            return new Line_StickerMessageEventContent((String)objMap.get(JSON_ID), (String)objMap.get(JSON_PACKAGEID), (String)objMap.get(JSON_STICKERID));
+        }     
         return null;
     }
     public static String buildReplyMessageJson(Line_ReplyMessage replyMessage){
